@@ -1,0 +1,863 @@
+/* ========== CRUNCHYROLL SUITE v7 – SERIES PAGE & MY LISTS ========== */
+:root {
+  --cr-orange: #F47521;
+  --cr-orange-hover: #FF8A3D;
+  --cr-dark: #000000;
+  --cr-card-bg: #141419;
+  --cr-text: #ffffff;
+  --cr-text-muted: #94a3b8;
+}
+
+html, body, .mainDrawer, .skinBody, .mainAnimatedPage:not(#videoOsdPage):not(.videoOsdPage) {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif !important;
+}
+
+/* 1. HIDE OLD skinHeader & BLURRY BACKDROP IMAGES */
+.skinHeader,
+.backdropImage {
+  display: none !important;
+}
+
+/* 2. STYLE THE MUI HEADER */
+.MuiAppBar-root {
+  background: #000000 !important;
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  z-index: 1000 !important;
+}
+.MuiToolbar-root {
+  min-height: 56px !important;
+  padding: 0 16px !important;
+}
+
+/* 3. HIDE NAV LINKS EXCEPT LOGO */
+.MuiStack-root > a.MuiButton-root {
+  display: none !important;
+}
+.MuiStack-root > a.MuiButton-root:first-child {
+  display: inline-flex !important;
+}
+
+/* 4. SEARCH BAR IN HEADER */
+#crHeaderSearch {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 1 1 auto !important;
+  max-width: 480px !important;
+  margin: 0 auto !important;
+  padding: 0 16px !important;
+}
+#crHeaderSearch .cr-search-wrapper {
+  position: relative !important;
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#crHeaderSearch .cr-search-icon {
+  position: absolute !important;
+  left: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #94a3b8 !important;
+  pointer-events: none !important;
+  display: flex !important;
+  align-items: center !important;
+}
+#crHeaderSearch .cr-search-input {
+  width: 100% !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 24px !important;
+  color: #fff !important;
+  font-size: 0.9em !important;
+  padding: 8px 16px 8px 42px !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+#crHeaderSearch .cr-search-input:focus {
+  border-color: #F47521 !important;
+  box-shadow: 0 0 12px rgba(244, 117, 33, 0.35) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* 5. TOOLBAR BOOKMARK ICON (Picture 4) */
+#crToolbarWatchlistBtn {
+  background: transparent !important;
+  border: none !important;
+  color: #ffffff !important;
+  padding: 8px !important;
+  border-radius: 50% !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 8px !important;
+  transition: color 0.2s ease, background 0.2s ease !important;
+}
+#crToolbarWatchlistBtn:hover {
+  color: #F47521 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+#crToolbarWatchlistBtn.active {
+  color: #F47521 !important;
+}
+
+/* 6. HIDE DEFAULT JELLYFIN SECTIONS ON HOME */
+#indexPage .sections,
+.homeSectionsContainer {
+  display: none !important;
+}
+
+/* 7. CRUNCHYROLL HOMEPAGE ROOT CONTAINER */
+#crCrunchyrollHome {
+  display: block !important;
+  visibility: visible !important;
+  width: 100% !important;
+  max-width: 1600px !important;
+  margin: 0 auto !important;
+  padding: 12px 24px 60px 24px !important;
+  box-sizing: border-box !important;
+}
+
+/* 8. HERO SPOTLIGHT BANNER */
+#crHeroBanner {
+  position: relative !important;
+  width: 100% !important;
+  height: 500px !important;
+  margin: 0 0 36px 0 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  background: #0d0d12 !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
+}
+.cr-hero-slide {
+  position: absolute !important;
+  top: 0; left: 0; width: 100%; height: 100% !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.7s ease !important;
+  z-index: 1 !important;
+}
+.cr-hero-slide.active {
+  opacity: 1 !important;
+  visibility: visible !important;
+  z-index: 2 !important;
+}
+.cr-hero-bg {
+  position: absolute !important;
+  top: 0; right: 0 !important;
+  width: 72% !important;
+  height: 100% !important;
+  background-size: cover !important;
+  background-position: center 20% !important;
+  transform: scale(1.02) !important;
+  transition: transform 6s ease-out !important;
+}
+.cr-hero-slide.active .cr-hero-bg {
+  transform: scale(1.0) !important;
+}
+.cr-hero-gradient {
+  position: absolute !important;
+  top: 0; left: 0; width: 100%; height: 100% !important;
+  background: linear-gradient(to right, #000000 0%, rgba(0,0,0,0.92) 35%, rgba(0,0,0,0.5) 65%, transparent 100%),
+              linear-gradient(to top, #000000 0%, rgba(0,0,0,0.4) 25%, transparent 60%) !important;
+}
+.cr-hero-content {
+  position: absolute !important;
+  top: 50% !important;
+  left: 48px !important;
+  transform: translateY(-50%) !important;
+  max-width: 580px !important;
+  z-index: 3 !important;
+}
+.cr-hero-title {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  color: #ffffff !important;
+  margin: 0 0 14px 0 !important;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.8) !important;
+}
+.cr-hero-tags {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 14px !important;
+  font-size: 0.88rem !important;
+  color: #cccccc !important;
+}
+.cr-tag-badge {
+  background: rgba(255,255,255,0.15) !important;
+  border: 1px solid rgba(255,255,255,0.25) !important;
+  padding: 2px 7px !important;
+  border-radius: 4px !important;
+  font-weight: 700 !important;
+  font-size: 0.75rem !important;
+  color: #ffffff !important;
+}
+.cr-tag-subdub { color: #a0a0a0 !important; font-weight: 500 !important; }
+.cr-tag-genres { color: #e0e0e0 !important; }
+.cr-hero-desc {
+  font-size: 0.95rem !important;
+  line-height: 1.55 !important;
+  color: #b0b0b8 !important;
+  margin: 0 0 24px 0 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 3 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+.cr-hero-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+}
+.cr-btn-watch {
+  background: #F47521 !important;
+  color: #000 !important;
+  font-weight: 800 !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  text-decoration: none !important;
+  padding: 13px 26px !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  border: none !important;
+  box-shadow: 0 4px 16px rgba(244,117,33,0.4) !important;
+  transition: transform 0.15s ease, background 0.15s ease !important;
+}
+.cr-btn-watch:hover {
+  background: #FF8A3D !important;
+  transform: scale(1.03) !important;
+}
+.cr-btn-bookmark {
+  background: transparent !important;
+  color: #F47521 !important;
+  border: 2px solid #F47521 !important;
+  width: 46px !important; height: 46px !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+.cr-btn-bookmark:hover {
+  background: rgba(244,117,33,0.15) !important;
+  transform: scale(1.05) !important;
+}
+
+.cr-btn-watched {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+.cr-btn-watched:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.05) !important;
+}
+.cr-btn-watched.watched {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+}
+
+.cr-btn-bookmark.bookmarked {
+  background: #F47521 !important;
+  color: #000000 !important;
+}
+.cr-hero-arrow {
+  position: absolute !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: rgba(0,0,0,0.4) !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  color: #fff !important;
+  width: 44px !important; height: 44px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.2rem !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  opacity: 0.7 !important;
+  transition: opacity 0.2s ease, background 0.2s ease !important;
+}
+.cr-hero-arrow:hover { opacity: 1 !important; background: rgba(244,117,33,0.8) !important; color: #000 !important; }
+.cr-hero-arrow.prev { left: 16px !important; }
+.cr-hero-arrow.next { right: 16px !important; }
+.cr-hero-dashes {
+  position: absolute !important;
+  bottom: 24px !important;
+  left: 48px !important;
+  display: flex !important;
+  gap: 8px !important;
+  z-index: 10 !important;
+}
+.cr-hero-dash {
+  width: 24px !important;
+  height: 4px !important;
+  background: rgba(255,255,255,0.3) !important;
+  border-radius: 2px !important;
+  cursor: pointer !important;
+  transition: width 0.3s ease, background 0.3s ease !important;
+}
+.cr-hero-dash.active {
+  width: 44px !important;
+  background: #F47521 !important;
+}
+
+/* 9. SECTIONS (WATCHED LIST & MOST POPULAR) */
+.cr-section {
+  position: relative !important;
+  margin: 0 0 36px 0 !important;
+  width: 100% !important;
+}
+.cr-section-header {
+  display: flex !important;
+  align-items: center !important;
+  margin-bottom: 16px !important;
+}
+.cr-section-title {
+  font-size: 1.5rem !important;
+  font-weight: 700 !important;
+  color: #fff !important;
+  margin: 0 !important;
+}
+.cr-cards-row {
+  display: flex !important;
+  gap: 16px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  scroll-behavior: smooth !important;
+  padding: 4px 4px 12px 4px !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+.cr-cards-row::-webkit-scrollbar { height: 6px !important; }
+.cr-cards-row::-webkit-scrollbar-track { background: rgba(255,255,255,0.05) !important; border-radius: 3px !important; }
+.cr-cards-row::-webkit-scrollbar-thumb { background: rgba(244,117,33,0.4) !important; border-radius: 3px !important; }
+.cr-cards-row::-webkit-scrollbar-thumb:hover { background: #F47521 !important; }
+
+.cr-row-btn {
+  position: absolute !important;
+  top: 55% !important;
+  transform: translateY(-50%) !important;
+  background: rgba(0,0,0,0.7) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+  color: #fff !important;
+  width: 40px !important; height: 56px !important;
+  border-radius: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.4rem !important;
+  cursor: pointer !important;
+  z-index: 10 !important;
+  opacity: 0 !important;
+  transition: opacity 0.2s ease, background 0.2s ease !important;
+}
+.cr-section:hover .cr-row-btn { opacity: 0.9 !important; }
+.cr-row-btn:hover { opacity: 1 !important; background: #F47521 !important; color: #000 !important; }
+.cr-row-btn.left { left: 0 !important; }
+.cr-row-btn.right { right: 0 !important; }
+
+/* 10. POSTER CARDS */
+.cr-poster-card {
+  flex: 0 0 195px !important;
+  width: 195px !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+.cr-poster-card:hover { transform: translateY(-4px) !important; }
+.cr-poster-thumb-wrap {
+  position: relative !important;
+  width: 100% !important;
+  padding-bottom: 145% !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  background: #15151e !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+.cr-poster-card:hover .cr-poster-thumb-wrap {
+  border-color: #F47521 !important;
+  box-shadow: 0 6px 20px rgba(244,117,33,0.25) !important;
+}
+.cr-poster-thumb {
+  position: absolute !important;
+  top: 0; left: 0; width: 100%; height: 100% !important;
+  object-fit: cover !important;
+}
+.cr-poster-info { padding: 8px 2px 4px 2px !important; }
+.cr-poster-title {
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.cr-poster-subtitle { font-size: 0.8rem !important; color: #94a3b8 !important; margin-top: 3px !important; }
+
+.cr-history-badge {
+  position: absolute !important;
+  top: 8px; right: 8px !important;
+  background: rgba(0, 180, 0, 0.85) !important;
+  color: #fff !important;
+  font-size: 0.72rem !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  z-index: 3 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+
+/* 11. WATCHED LIST CARDS */
+.cr-watched-card {
+  flex: 0 0 280px !important;
+  width: 280px !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+.cr-watched-card:hover { transform: translateY(-4px) !important; }
+.cr-watched-thumb-wrap {
+  position: relative !important;
+  width: 100% !important; height: 158px !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  background: #15151e !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+.cr-watched-card:hover .cr-watched-thumb-wrap { border-color: #F47521 !important; }
+.cr-watched-thumb { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+.cr-watched-progress-bar {
+  position: absolute !important;
+  bottom: 0; left: 0 !important;
+  height: 4px !important;
+  background: #F47521 !important;
+  z-index: 2 !important;
+}
+.cr-watched-info { padding: 8px 2px 4px 2px !important; }
+.cr-watched-series-title {
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  color: #fff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+.cr-watched-ep-title {
+  font-size: 0.82rem !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-top: 2px !important;
+}
+
+/* ============================================================== */
+/* 12. CRUNCHYROLL ANIME SERIES DETAILS PAGE (PICTURE 2 OVERHAUL) */
+/* ============================================================== */
+#crSeriesDetailPage {
+  display: block !important;
+  width: 100% !important;
+  max-width: 1600px !important;
+  margin: 0 auto !important;
+  padding: 0 0 80px 0 !important;
+  background: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* Series Hero Header */
+.cr-detail-hero {
+  position: relative !important;
+  width: 100% !important;
+  min-height: 520px !important;
+  overflow: hidden !important;
+  margin-bottom: 30px !important;
+}
+.cr-detail-hero-bg {
+  position: absolute !important;
+  top: 0; right: 0; width: 75% !important; height: 100% !important;
+  background-size: cover !important;
+  background-position: center 25% !important;
+}
+.cr-detail-hero-gradient {
+  position: absolute !important;
+  top: 0; left: 0; width: 100%; height: 100% !important;
+  background: linear-gradient(to right, #000000 0%, rgba(0,0,0,0.92) 42%, rgba(0,0,0,0.5) 75%, transparent 100%),
+              linear-gradient(to top, #000000 0%, rgba(0,0,0,0.6) 20%, transparent 60%) !important;
+}
+.cr-detail-hero-content {
+  position: relative !important;
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  padding: 40px 32px !important;
+  z-index: 2 !important;
+}
+
+.cr-detail-logo {
+  max-width: 420px !important;
+  max-height: 120px !important;
+  object-fit: contain !important;
+  margin-bottom: 16px !important;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.8)) !important;
+}
+.cr-detail-title {
+  font-size: 2.8rem !important;
+  font-weight: 800 !important;
+  line-height: 1.15 !important;
+  margin: 0 0 16px 0 !important;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.8) !important;
+}
+
+.cr-detail-tags {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+  font-size: 0.88rem !important;
+  color: #cccccc !important;
+}
+.cr-detail-rating-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 20px !important;
+  font-size: 0.85rem !important;
+  color: #e0e0e0 !important;
+}
+.cr-stars {
+  color: #F47521 !important;
+  letter-spacing: 2px !important;
+  font-size: 1rem !important;
+}
+
+.cr-detail-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  margin-bottom: 28px !important;
+}
+.cr-btn-circle {
+  background: transparent !important;
+  border: 1.5px solid rgba(255,255,255,0.3) !important;
+  color: #ffffff !important;
+  width: 44px !important; height: 44px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+.cr-btn-circle:hover {
+  border-color: #F47521 !important;
+  color: #F47521 !important;
+  background: rgba(244,117,33,0.1) !important;
+}
+.cr-btn-circle.active {
+  background: #F47521 !important;
+  border-color: #F47521 !important;
+  color: #000000 !important;
+}
+
+/* Two column synopsis & audio */
+.cr-detail-synopsis-row {
+  display: flex !important;
+  gap: 48px !important;
+  max-width: 1100px !important;
+  font-size: 0.92rem !important;
+  line-height: 1.6 !important;
+}
+.cr-detail-synopsis-col {
+  flex: 1 1 65% !important;
+  color: #c4c4cc !important;
+}
+.cr-detail-meta-col {
+  flex: 0 0 35% !important;
+  font-size: 0.85rem !important;
+  color: #94a3b8 !important;
+  line-height: 1.8 !important;
+}
+.cr-meta-label {
+  color: #e2e8f0 !important;
+  font-weight: 600 !important;
+}
+
+/* Episodes Section */
+.cr-episodes-section {
+  max-width: 1400px !important;
+  margin: 0 auto !important;
+  padding: 0 32px !important;
+}
+.cr-episodes-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding-bottom: 20px !important;
+  margin-bottom: 24px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+}
+.cr-season-select {
+  background: #141419 !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  color: #ffffff !important;
+  padding: 10px 18px !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  outline: none !important;
+  cursor: pointer !important;
+}
+.cr-season-select:focus {
+  border-color: #F47521 !important;
+}
+.cr-sort-text {
+  font-size: 0.85rem !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Episodes Grid */
+.cr-episodes-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+  gap: 24px 20px !important;
+}
+.cr-ep-card {
+  display: flex !important;
+  flex-direction: column !important;
+  cursor: pointer !important;
+  transition: transform 0.2s ease !important;
+}
+.cr-ep-card:hover {
+  transform: translateY(-4px) !important;
+}
+.cr-ep-thumb-wrap {
+  position: relative !important;
+  width: 100% !important;
+  padding-bottom: 56.25% !important; /* 16:9 */
+  border-radius: 6px !important;
+  overflow: hidden !important;
+  background: #141419 !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  transition: border-color 0.2s ease !important;
+}
+.cr-ep-card:hover .cr-ep-thumb-wrap {
+  border-color: #F47521 !important;
+}
+.cr-ep-thumb {
+  position: absolute !important;
+  top: 0; left: 0; width: 100%; height: 100% !important;
+  object-fit: cover !important;
+}
+.cr-ep-duration {
+  position: absolute !important;
+  bottom: 8px !important;
+  right: 8px !important;
+  background: rgba(0, 0, 0, 0.85) !important;
+  color: #ffffff !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  padding: 2px 7px !important;
+  border-radius: 4px !important;
+}
+.cr-ep-play-overlay {
+  position: absolute !important;
+  top: 0; left: 0; width: 100%; height: 100% !important;
+  background: rgba(0,0,0,0.3) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0 !important;
+  transition: opacity 0.2s ease !important;
+}
+.cr-ep-card:hover .cr-ep-play-overlay {
+  opacity: 1 !important;
+}
+.cr-ep-play-icon {
+  background: #F47521 !important;
+  color: #000 !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.cr-ep-info {
+  padding-top: 10px !important;
+}
+.cr-ep-series-name {
+  font-size: 0.72rem !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 3px !important;
+}
+.cr-ep-title {
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  line-height: 1.3 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin-bottom: 4px !important;
+}
+.cr-ep-subdub {
+  font-size: 0.78rem !important;
+  color: #94a3b8 !important;
+}
+
+/* ============================================================== */
+/* 13. "MY LISTS" PAGE (PICTURE 3 OVERHAUL)                       */
+/* ============================================================== */
+#crMyListsPage {
+  display: block !important;
+  width: 100% !important;
+  max-width: 1400px !important;
+  margin: 30px auto 80px auto !important;
+  padding: 0 24px !important;
+  box-sizing: border-box !important;
+}
+.cr-mylists-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  margin-bottom: 24px !important;
+}
+.cr-mylists-title {
+  font-size: 1.8rem !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0 !important;
+}
+.cr-mylists-tabs {
+  display: flex !important;
+  justify-content: center !important;
+  gap: 32px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.12) !important;
+  margin-bottom: 40px !important;
+}
+.cr-mylists-tab-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 1px !important;
+  padding: 12px 16px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: color 0.2s ease !important;
+}
+.cr-mylists-tab-btn:hover {
+  color: #ffffff !important;
+}
+.cr-mylists-tab-btn.active {
+  color: #ffffff !important;
+}
+.cr-mylists-tab-btn.active::after {
+  content: "" !important;
+  position: absolute !important;
+  bottom: -1px !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 3px !important;
+  background: #F47521 !important;
+  border-radius: 2px 2px 0 0 !important;
+}
+
+/* Empty Watchlist Box (Picture 3 match) */
+.cr-empty-box {
+  max-width: 700px !important;
+  margin: 40px auto !important;
+  border: 1px dashed rgba(255,255,255,0.2) !important;
+  border-radius: 12px !important;
+  padding: 50px 30px !important;
+  text-align: center !important;
+  background: rgba(255,255,255,0.02) !important;
+}
+.cr-empty-icon {
+  font-size: 3.5rem !important;
+  margin-bottom: 16px !important;
+}
+.cr-empty-text {
+  font-size: 1rem !important;
+  color: #cbd5e1 !important;
+  margin: 0 0 24px 0 !important;
+  line-height: 1.5 !important;
+}
+.cr-btn-home-feed {
+  background: #F47521 !important;
+  color: #000000 !important;
+  font-weight: 800 !important;
+  font-size: 0.9rem !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  padding: 12px 28px !important;
+  border-radius: 4px !important;
+  border: none !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  transition: transform 0.15s ease, background 0.15s ease !important;
+}
+.cr-btn-home-feed:hover {
+  background: #FF8A3D !important;
+  transform: scale(1.03) !important;
+}
+
+/* Watchlist Grid */
+.cr-watchlist-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)) !important;
+  gap: 24px !important;
+}
+
+/* ============================================================== */
+/* 14. VIDEO PLAYER SAFE TRANSPARENCY (PREVENTS BLACK SCREEN)     */
+/* ============================================================== */
+#videoOsdPage,
+.videoOsdPage,
+.videoPage,
+body.hide-scroll,
+body.hide-scroll .mainAnimatedPage,
+.transparentDocument,
+.transparentDocument .mainAnimatedPage,
+.transparentDocument body,
+.transparentDocument #reactRoot {
+  background-color: transparent !important;
+  background: transparent !important;
+}
+.videoPlayerContainer {
+  z-index: 1 !important;
+}
+.videoOsdBottom,
+.videoOsdHeader,
+.videoPlayerContainer-onTop {
+  z-index: 1000 !important;
+}
