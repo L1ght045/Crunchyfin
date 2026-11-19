@@ -1,14 +1,14 @@
 (function() {
   'use strict';
-  if (window.__cr_suite_v7__) return;
-  window.__cr_suite_v7__ = true;
+  if (window.__cr_suite_v8_1__) return;
+  window.__cr_suite_v8_1__ = true;
 
   const API_BASE = window.location.origin;
   const AUTH_KEY = "YOUR_API_KEY_HERE";
 
   function isHome() {
     const h = window.location.hash || "";
-    return h === "" || h === "#" || h === "#/" || h === "#/home" || h === "#/home?";
+    return h === "" || h === "#" || h === "#/" || h === "#/home" || h.startsWith("#/home?");
   }
   function isDetails() {
     const h = window.location.hash || "";
@@ -41,7 +41,6 @@
     }
     localStorage.setItem("cr_watchlist", JSON.stringify(wl));
 
-    // Also sync with Jellyfin favorite API
     getActiveUserId().then(function(uid) {
       if (!uid) return;
       var method = added ? "POST" : "DELETE";
@@ -63,16 +62,39 @@
     });
   }
 
-  // 1. INJECT HEADER SEARCH & BOOKMARK BUTTON (Picture 4)
+  // 1. INJECT HEADER (DESKTOP SEARCH & MOBILE LOGO/ICONS)
   function injectHeaderElements() {
     var h = window.location.hash || "";
     if (h.includes("login")) {
       var s = document.getElementById("crHeaderSearch"); if (s) s.remove();
       var b = document.getElementById("crToolbarWatchlistBtn"); if (b) b.remove();
+      var mob = document.getElementById("crMobileHeaderActions"); if (mob) mob.remove();
+      var logo = document.getElementById("crMobileLogo"); if (logo) logo.remove();
       return;
     }
 
-    // Search bar
+    // Suppress JE "More from JE" launcher
+    var jeLauncher = document.getElementById("je-header-launcher");
+    if (jeLauncher) jeLauncher.style.setProperty("display", "none", "important");
+    var jePanel = document.getElementById("je-header-launcher-panel");
+    if (jePanel) jePanel.remove();
+    var randomBtn = document.getElementById("randomItemButton");
+    if (randomBtn) randomBtn.style.setProperty("display", "none", "important");
+
+    var toolbar = document.querySelector(".MuiToolbar-root");
+    if (!toolbar) return;
+
+    // Mobile Crunchyroll Logo (Left)
+    if (!document.getElementById("crMobileLogo")) {
+      var mobLogo = document.createElement("a");
+      mobLogo.id = "crMobileLogo";
+      mobLogo.href = "#/home";
+      mobLogo.title = "Crunchyroll";
+      mobLogo.innerHTML = '<svg viewBox="0 0 36 36" style="width:34px;height:34px;display:block;"><circle cx="18" cy="18" r="16" fill="#F47521"/><path d="M18 7a11 11 0 1 0 11 11A11.012 11.012 0 0 0 18 7zm0 18a7 7 0 1 1 7-7 7.008 7.008 0 0 1-7 7z" fill="#000000"/><circle cx="21" cy="16" r="3.2" fill="#F47521"/></svg>';
+      toolbar.prepend(mobLogo);
+    }
+
+    // Desktop search bar
     var target = document.querySelector(".je-header-action") ||
                  document.querySelector(".MuiToolbar-root > div:nth-child(2)");
     if (target && !document.getElementById("crHeaderSearch")) {
@@ -93,7 +115,7 @@
       target.prepend(wrap);
     }
 
-    // Bookmark button in toolbar right section (Picture 4)
+    // Desktop toolbar bookmark button
     var userSec = document.querySelector(".MuiToolbar-root > div:last-child");
     if (userSec && !document.getElementById("crToolbarWatchlistBtn")) {
       var btn = document.createElement("button");
@@ -105,9 +127,89 @@
       };
       userSec.prepend(btn);
     }
+
+    // Mobile Header Actions (Cast & Search icons)
+    if (userSec && !document.getElementById("crMobileHeaderActions")) {
+      var mobActions = document.createElement("div");
+      mobActions.id = "crMobileHeaderActions";
+      mobActions.innerHTML = 
+        '<button class="cr-mobile-icon-btn" title="Cast"><svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:currentColor;"><path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm20-7H3c-1.1 0-2 .9-2 2v3h2V5h18v14h-7v2h7c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg></button>' +
+        '<button class="cr-mobile-icon-btn" id="crMobileSearchBtn" title="Search"><svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:currentColor;"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5S11.99 14 9.5 14z"/></svg></button>';
+      var mobSearch = mobActions.querySelector("#crMobileSearchBtn");
+      if (mobSearch) {
+        mobSearch.onclick = function() { window.location.hash = "#/search"; };
+      }
+      userSec.appendChild(mobActions);
+    }
   }
 
-  // 2. HIDE MUI NAV LINKS (keep logo only)
+  // 2. INJECT FIXED MOBILE BOTTOM NAVIGATION BAR (4 TABS WITH USER PFP)
+  function injectMobileBottomNav() {
+    if (document.getElementById("crMobileBottomNav")) {
+      updateActiveBottomTab();
+      return;
+    }
+    var nav = document.createElement("nav");
+    nav.id = "crMobileBottomNav";
+    nav.innerHTML = 
+      '<a class="cr-bottom-tab" data-tab="home" href="#/home">' +
+        '<svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>' +
+        '<span>Home</span>' +
+      '</a>' +
+      '<a class="cr-bottom-tab" data-tab="lists" href="#/lists">' +
+        '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+        '<span>My Lists</span>' +
+      '</a>' +
+      '<a class="cr-bottom-tab" data-tab="browse" href="#/search">' +
+        '<svg viewBox="0 0 24 24"><path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z"/></svg>' +
+        '<span>Browse</span>' +
+      '</a>' +
+      '<a class="cr-bottom-tab" data-tab="account" href="#/settings">' +
+        '<div class="cr-avatar-fallback">' +
+          '<svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>' +
+        '</div>' +
+        '<span>Account</span>' +
+      '</a>';
+    document.body.appendChild(nav);
+
+    // Dynamic User PFP loading
+    getActiveUserId().then(function(uid) {
+      if (!uid) return;
+      var accTab = nav.querySelector('[data-tab="account"]');
+      if (!accTab) return;
+
+      var avatarImg = document.createElement("img");
+      avatarImg.className = "cr-bottom-user-avatar";
+      avatarImg.src = API_BASE + "/Users/" + uid + "/Images/Primary?quality=80";
+      avatarImg.alt = "Account";
+      avatarImg.onload = function() {
+        var fallback = accTab.querySelector(".cr-avatar-fallback");
+        if (fallback) fallback.remove();
+        accTab.prepend(avatarImg);
+      };
+    });
+
+    updateActiveBottomTab();
+  }
+
+  function updateActiveBottomTab() {
+    var h = window.location.hash || "";
+    var nav = document.getElementById("crMobileBottomNav");
+    if (!nav) return;
+    nav.querySelectorAll(".cr-bottom-tab").forEach(function(tab) {
+      tab.classList.remove("active");
+    });
+    if (isHome()) {
+      var t = nav.querySelector('[data-tab="home"]'); if (t) t.classList.add("active");
+    } else if (isLists()) {
+      var t = nav.querySelector('[data-tab="lists"]'); if (t) t.classList.add("active");
+    } else if (h.includes("search")) {
+      var t = nav.querySelector('[data-tab="browse"]'); if (t) t.classList.add("active");
+    } else if (h.includes("settings") || h.includes("user")) {
+      var t = nav.querySelector('[data-tab="account"]'); if (t) t.classList.add("active");
+    }
+  }
+
   function purgeNavLinks() {
     var stack = document.querySelector(".MuiStack-root");
     if (!stack) return;
@@ -131,640 +233,509 @@
       .catch(function() { return null; });
   }
 
-  // 3. BUILD HOMEPAGE
+  // 3. BUILD HOMEPAGE (CLEAN ANIME-ONLY HERO & MOST POPULAR)
   var currentSlide = 0;
   var slideTimer = null;
-  var heroSlides = [];
-  var isBuildingHome = false;
 
   function buildCrunchyrollHome() {
-    if (!isHome()) {
-      var old = document.getElementById("crCrunchyrollHome");
-      if (old) old.remove();
-      if (slideTimer) clearInterval(slideTimer);
-      return Promise.resolve();
-    }
-    if (document.getElementById("crCrunchyrollHome") || isBuildingHome) return Promise.resolve();
-    isBuildingHome = true;
-
-    var homePage = document.querySelector("#indexPage") ||
-                   document.querySelector(".homePage") ||
-                   document.querySelector("#homeTab") ||
-                   document.querySelector(".page:not(.hide)");
-    if (!homePage) { isBuildingHome = false; return Promise.resolve(); }
+    var page = document.querySelector("#indexPage") ||
+               document.querySelector(".page:not(.hide)");
+    if (!page) return;
+    if (document.getElementById("crCrunchyrollHome")) return;
 
     var container = document.createElement("div");
     container.id = "crCrunchyrollHome";
 
-    return getActiveUserId().then(function(userId) {
-      return fetch(API_BASE + "/Items?IncludeItemTypes=Series&Recursive=true&Fields=Overview,Genres,BackdropImageTags,ParentId&SortBy=SortName&ApiKey=" + AUTH_KEY + (userId ? "&userId=" + userId : ""))
+    // Hero banner container
+    var hero = document.createElement("div");
+    hero.id = "crHeroBanner";
+    container.appendChild(hero);
+
+    // Most Popular section
+    var popSec = document.createElement("div");
+    popSec.className = "cr-section";
+    popSec.id = "crMostPopularSection";
+    popSec.innerHTML = 
+      '<div class="cr-section-header">' +
+        '<h2 class="cr-section-title">Most Popular</h2>' +
+      '</div>' +
+      '<div class="cr-cards-row" id="crMostPopularRow"></div>' +
+      '<button class="cr-row-btn left">&#10094;</button>' +
+      '<button class="cr-row-btn right">&#10095;</button>';
+    container.appendChild(popSec);
+
+    page.appendChild(container);
+
+    // Fetch and populate hero items (Anime series)
+    getActiveUserId().then(function(uid) {
+      if (!uid) return;
+
+      var url = API_BASE + "/Users/" + uid + "/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,Genres,BackdropImageTags,PrimaryImageAspectRatio,UserData&SortBy=SortName&ApiKey=" + AUTH_KEY;
+      fetch(url)
         .then(function(r) { return r.json(); })
-        .then(function(aData) {
-          var allAnime = aData.Items || [];
+        .then(function(data) {
+          var items = data.Items || [];
+          var heroItems = items.filter(function(i) {
+            return i.BackdropImageTags && i.BackdropImageTags.length > 0;
+          });
 
-          // --- HERO BANNER ---
-          var heroItems = allAnime.filter(function(i) { return i.BackdropImageTags && i.BackdropImageTags.length > 0; }).slice(0, 6);
-          if (heroItems.length > 0) {
-            var bannerEl = document.createElement("div");
-            bannerEl.id = "crHeroBanner";
-
-            heroItems.forEach(function(item, idx) {
-              var bgUrl = API_BASE + "/Items/" + item.Id + "/Images/Backdrop/0?maxWidth=1920&quality=85";
-              var detailUrl = "#/details?id=" + item.Id + "&serverId=" + item.ServerId;
-              var genres = (item.Genres || []).slice(0, 3).join(", ");
-              var overview = item.Overview || "Stream this hit anime on your personal server.";
-              var tmp = document.createElement("div");
-              tmp.innerHTML = overview;
-              overview = tmp.textContent || tmp.innerText || "";
-              var isItemWatched = Boolean(item.UserData && item.UserData.Played);
-            var inWl = isBookmarked(item.Id);
-
-              var slide = document.createElement("div");
-              slide.className = "cr-hero-slide" + (idx === 0 ? " active" : "");
-              slide.innerHTML =
-                '<div class="cr-hero-bg" style="background-image:url(\'' + bgUrl + '\')"></div>' +
-                '<div class="cr-hero-gradient"></div>' +
-                '<div class="cr-hero-content">' +
-                  '<h1 class="cr-hero-title">' + item.Name + '</h1>' +
-                  '<div class="cr-hero-tags">' +
-                    '<span class="cr-tag-badge">16+</span>' +
-                    '<span class="cr-tag-subdub">Sub | Dub</span>' +
-                    '<span class="cr-tag-genres">' + (genres ? "\u2022 " + genres : "") + '</span>' +
-                  '</div>' +
-                  '<p class="cr-hero-desc">' + overview + '</p>' +
-                  '<div class="cr-hero-actions">' +
-                    '<a href="' + detailUrl + '" class="cr-btn-watch">' +
-                      '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>' +
-                      ' Watch Now</a>' +
-                    '<button class="cr-btn-bookmark' + (inWl ? " bookmarked" : "") + '" data-bookmark-id="' + item.Id + '" title="Add to Watchlist">' +
-                      (inWl ? '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' :
-                              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>') +
-                    '</button>' +
-                  '</div>' +
-                '</div>';
-
-              var bmBtn = slide.querySelector('.cr-btn-bookmark');
-              bmBtn.addEventListener("click", function(e) {
-                e.stopPropagation();
-                toggleBookmark({ id: item.Id, name: item.Name, serverId: item.ServerId });
-              });
-
-              bannerEl.appendChild(slide);
-            });
-
-            var prevBtn = document.createElement("button");
-            prevBtn.className = "cr-hero-arrow prev"; prevBtn.innerHTML = "&#10094;";
-            prevBtn.addEventListener("click", function() { goToSlide((currentSlide - 1 + heroSlides.length) % heroSlides.length); });
-            bannerEl.appendChild(prevBtn);
-
-            var nextBtn = document.createElement("button");
-            nextBtn.className = "cr-hero-arrow next"; nextBtn.innerHTML = "&#10095;";
-            nextBtn.addEventListener("click", function() { goToSlide((currentSlide + 1) % heroSlides.length); });
-            bannerEl.appendChild(nextBtn);
-
-            var dashes = document.createElement("div");
-            dashes.className = "cr-hero-dashes";
-            heroItems.forEach(function(_, idx) {
-              var dash = document.createElement("div");
-              dash.className = "cr-hero-dash" + (idx === 0 ? " active" : "");
-              dash.addEventListener("click", function() { goToSlide(idx); });
-              dashes.appendChild(dash);
-            });
-            bannerEl.appendChild(dashes);
-
-            bannerEl.addEventListener("mouseenter", function() { if (slideTimer) clearInterval(slideTimer); });
-            bannerEl.addEventListener("mouseleave", function() { resetTimer(); });
-
-            container.appendChild(bannerEl);
-            heroSlides = bannerEl.querySelectorAll(".cr-hero-slide");
-            resetTimer();
-          }
-
-          // --- MOST POPULAR ---
-            if (allAnime.length > 0) {
-              var popSec = document.createElement("div");
-              popSec.className = "cr-section";
-              popSec.innerHTML = '<div class="cr-section-header"><h2 class="cr-section-title">Most Popular</h2></div>';
-              var popRow = document.createElement("div");
-              popRow.className = "cr-cards-row";
-
-              allAnime.forEach(function(item) {
-                var posterUrl = API_BASE + "/Items/" + item.Id + "/Images/Primary?maxWidth=350&quality=85";
-                var card = document.createElement("div");
-                card.className = "cr-poster-card";
-                card.onclick = function() { window.location.hash = "#/details?id=" + item.Id + "&serverId=" + item.ServerId; };
-                card.innerHTML =
-                  '<div class="cr-poster-thumb-wrap">' +
-                    '<img class="cr-poster-thumb" src="' + posterUrl + '" alt="' + item.Name + '" onerror="this.style.display=\'none\'" />' +
-                  '</div>' +
-                  '<div class="cr-poster-info">' +
-                    '<div class="cr-poster-title" title="' + item.Name + '">' + item.Name + '</div>' +
-                    '<div class="cr-poster-subtitle">Sub | Dub</div>' +
-                  '</div>';
-                popRow.appendChild(card);
-              });
-
-              var pL = document.createElement("button");
-              pL.className = "cr-row-btn left"; pL.innerHTML = "&#10094;";
-              pL.onclick = function() { popRow.scrollBy({left:-600,behavior:"smooth"}); };
-              var pR = document.createElement("button");
-              pR.className = "cr-row-btn right"; pR.innerHTML = "&#10095;";
-              pR.onclick = function() { popRow.scrollBy({left:600,behavior:"smooth"}); };
-              popSec.appendChild(pL); popSec.appendChild(pR);
-              popSec.appendChild(popRow);
-              container.appendChild(popSec);
-            }
-
-            var homeTab = document.querySelector("#homeTab") || homePage;
-            homeTab.prepend(container);
-            isBuildingHome = false;
+          populateHero(hero, heroItems.slice(0, 8), uid);
+          populateCardsRow(document.getElementById("crMostPopularRow"), items);
         });
-    }).catch(function(err) {
-      isBuildingHome = false;
     });
   }
 
-  function goToSlide(idx) {
-    if (!heroSlides.length) return;
-    heroSlides.forEach(function(s, i) { s.classList.toggle("active", i === idx); });
-    document.querySelectorAll(".cr-hero-dash").forEach(function(d, i) { d.classList.toggle("active", i === idx); });
-    currentSlide = idx;
-    resetTimer();
-  }
+  function populateHero(heroEl, items, uid) {
+    if (!items || !items.length) return;
+    heroEl.innerHTML = "";
 
-  function resetTimer() {
+    items.forEach(function(item, idx) {
+      var slide = document.createElement("div");
+      slide.className = "cr-hero-slide" + (idx === 0 ? " active" : "");
+      
+      var bgUrl = API_BASE + "/Items/" + item.Id + "/Images/Backdrop/0?maxWidth=1920&quality=85";
+      var genres = (item.Genres || []).slice(0, 3).join(", ") || "Anime";
+      var desc = item.Overview || "Stream popular series on your personalized anime portal.";
+      var isBook = isBookmarked(item.Id);
+      var detailHash = "#/details?id=" + item.Id;
+
+      slide.innerHTML = 
+        '<div class="cr-hero-bg" style="background-image: url(\'' + bgUrl + '\');"></div>' +
+        '<div class="cr-hero-gradient"></div>' +
+        '<div class="cr-hero-content">' +
+          '<h1 class="cr-hero-title">' + item.Name + '</h1>' +
+          '<div class="cr-hero-tags">' +
+            '<span class="cr-tag-badge">16+</span>' +
+            '<span class="cr-tag-subdub">Sub | Dub</span>' +
+            '<span class="cr-tag-genres">• ' + genres + '</span>' +
+          '</div>' +
+          '<p class="cr-hero-desc">' + desc + '</p>' +
+          '<div class="cr-hero-actions">' +
+            '<a class="cr-btn-watch" href="' + detailHash + '">' +
+              '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>' +
+              '<span>Start Watching E1</span>' +
+            '</a>' +
+            '<button class="cr-btn-bookmark' + (isBook ? ' bookmarked active' : '') + '" data-bookmark-id="' + item.Id + '" title="Add to Watchlist">' +
+              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:' + (isBook ? 'currentColor' : 'none') + ';stroke:currentColor;stroke-width:2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+
+      var bBtn = slide.querySelector('.cr-btn-bookmark');
+      bBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleBookmark({ id: item.Id, name: item.Name, type: item.Type });
+      };
+
+      heroEl.appendChild(slide);
+    });
+
+    // Arrows
+    var prevBtn = document.createElement("button");
+    prevBtn.className = "cr-hero-arrow prev";
+    prevBtn.innerHTML = "&#10094;";
+    prevBtn.onclick = function() { changeSlide(currentSlide - 1, items.length); };
+    heroEl.appendChild(prevBtn);
+
+    var nextBtn = document.createElement("button");
+    nextBtn.className = "cr-hero-arrow next";
+    nextBtn.innerHTML = "&#10095;";
+    nextBtn.onclick = function() { changeSlide(currentSlide + 1, items.length); };
+    heroEl.appendChild(nextBtn);
+
+    // Dashes
+    var dashes = document.createElement("div");
+    dashes.className = "cr-hero-dashes";
+    for (var i = 0; i < items.length; i++) {
+      var dash = document.createElement("div");
+      dash.className = "cr-hero-dash" + (i === 0 ? " active" : "");
+      dash.setAttribute("data-idx", i);
+      dash.onclick = (function(index) {
+        return function() { changeSlide(index, items.length); };
+      })(i);
+      dashes.appendChild(dash);
+    }
+    heroEl.appendChild(dashes);
+
+    // Auto rotate
     if (slideTimer) clearInterval(slideTimer);
     slideTimer = setInterval(function() {
-      if (!heroSlides.length) return;
-      goToSlide((currentSlide + 1) % heroSlides.length);
+      changeSlide(currentSlide + 1, items.length);
     }, 6000);
   }
 
-  // ==============================================================
-  // 4. BUILD CRUNCHYROLL ANIME SERIES DETAILS PAGE (PICTURE 2)
-  // ==============================================================
-  var isBuildingDetails = false;
-  var currentSeriesId = null;
+  function changeSlide(targetIdx, total) {
+    if (total <= 0) return;
+    currentSlide = (targetIdx + total) % total;
 
-  function buildCrunchyrollSeriesPage() {
-    console.log("[CR_SERIES] buildCrunchyrollSeriesPage invoked! hash=" + window.location.hash);
-    if (!isDetails()) {
-      var old = document.getElementById("crSeriesDetailPage");
-      if (old) old.remove();
-      currentSeriesId = null;
-      return;
+    var slides = document.querySelectorAll(".cr-hero-slide");
+    var dashes = document.querySelectorAll(".cr-hero-dash");
+
+    slides.forEach(function(s, idx) {
+      if (idx === currentSlide) s.classList.add("active");
+      else s.classList.remove("active");
+    });
+    dashes.forEach(function(d, idx) {
+      if (idx === currentSlide) d.classList.add("active");
+      else d.classList.remove("active");
+    });
+  }
+
+  function populateCardsRow(rowEl, items) {
+    if (!rowEl) return;
+    rowEl.innerHTML = "";
+
+    items.forEach(function(item) {
+      var card = document.createElement("a");
+      card.className = "cr-poster-card";
+      card.href = "#/details?id=" + item.Id;
+
+      var imgUrl = API_BASE + "/Items/" + item.Id + "/Images/Primary?maxHeight=450&quality=85";
+      var sub = item.Type === "Series" ? "Series" : (item.ProductionYear ? "" + item.ProductionYear : "Anime");
+
+      card.innerHTML = 
+        '<div class="cr-poster-img-wrap">' +
+          '<img class="cr-poster-img" src="' + imgUrl + '" alt="' + item.Name + '" loading="lazy" />' +
+        '</div>' +
+        '<div class="cr-poster-title">' + item.Name + '</div>' +
+        '<div class="cr-poster-subtitle">' + sub + '</div>';
+
+      rowEl.appendChild(card);
+    });
+
+    // Arrow handlers
+    var sec = rowEl.closest(".cr-section");
+    if (sec) {
+      var leftBtn = sec.querySelector(".cr-row-btn.left");
+      var rightBtn = sec.querySelector(".cr-row-btn.right");
+      if (leftBtn) leftBtn.onclick = function() { rowEl.scrollBy({ left: -600, behavior: "smooth" }); };
+      if (rightBtn) rightBtn.onclick = function() { rowEl.scrollBy({ left: 600, behavior: "smooth" }); };
     }
+  }
 
-    var h = window.location.hash || "";
-    var m = h.match(/id=([a-f0-9]+)/i);
+  // 4. BUILD SERIES DETAILS PAGE OVERHAUL
+  function buildCrunchyrollSeriesPage() {
+    var page = document.querySelector("#itemDetailPage") || document.querySelector(".page:not(.hide)");
+    if (!page) return;
+    if (document.getElementById("crSeriesDetailPage")) return;
+
+    var m = window.location.hash.match(/id=([a-f0-9]+)/i);
     if (!m) return;
     var itemId = m[1];
 
-    if (currentSeriesId === itemId && document.getElementById("crSeriesDetailPage")) return;
-    if (isBuildingDetails) return;
-    isBuildingDetails = true;
-
-    var detailPage = document.querySelector("#itemDetailPage");
-    if (!detailPage) {
-      isBuildingDetails = false;
-      return;
-    }
-
-    // Check item type
     getActiveUserId().then(function(uid) {
-      return fetch(API_BASE + "/Users/" + (uid || "") + "/Items/" + itemId + "?ApiKey=" + AUTH_KEY)
+      if (!uid) return;
+
+      fetch(API_BASE + "/Users/" + uid + "/Items/" + itemId + "?ApiKey=" + AUTH_KEY)
         .then(function(r) { return r.json(); })
         .then(function(item) {
-          console.log("[CR_SERIES] Item fetched: " + item.Name + ", Type=" + item.Type);
-          if (item.Type !== "Series") {
-            // Not a series (e.g. single movie or episode) - don't replace with series page
-            var old = document.getElementById("crSeriesDetailPage");
-            if (old) old.remove();
-            isBuildingDetails = false;
-            return;
-          }
+          if (!item) return;
 
-          currentSeriesId = itemId;
-
-          // Fetch seasons & episodes
-          return Promise.all([
-            fetch(API_BASE + "/Shows/" + itemId + "/Seasons?userId=" + (uid || "") + "&ApiKey=" + AUTH_KEY).then(function(r){return r.json();}),
-            fetch(API_BASE + "/Shows/" + itemId + "/Episodes?userId=" + (uid || "") + "&Fields=Overview,RunTimeTicks,MediaStreams,UserData&ApiKey=" + AUTH_KEY).then(function(r){return r.json();})
-          ]).then(function(res) {
-            var seasons = res[0].Items || [];
-            var episodes = res[1].Items || [];
-
-            // Hide old Jellyfin details layout
-            var oldWrap = detailPage.querySelector(".detailPageWrapperContainer");
-            if (oldWrap) oldWrap.style.display = "none";
-            var oldLogo = detailPage.querySelector(".detailLogo");
-            if (oldLogo) oldLogo.style.display = "none";
-            var oldBackdrop = detailPage.querySelector(".itemBackdrop");
-            if (oldBackdrop) oldBackdrop.style.display = "none";
-
-            var oldCr = document.getElementById("crSeriesDetailPage");
-            if (oldCr) oldCr.remove();
-
-            var container = document.createElement("div");
-            container.id = "crSeriesDetailPage";
-
-            // Metadata parsing
-            var bgUrl = API_BASE + "/Items/" + item.Id + "/Images/Backdrop/0?maxWidth=1920&quality=90";
-            var logoUrl = (item.ImageTags && item.ImageTags.Logo) ? (API_BASE + "/Items/" + item.Id + "/Images/Logo?maxWidth=500") : null;
-            var genres = (item.Genres || []).join(", ");
-            var rating = item.CommunityRating ? item.CommunityRating.toFixed(1) : "4.8";
-            var ageRating = item.OfficialRating || "14+";
-            var isItemWatched = Boolean(item.UserData && item.UserData.Played);
-            var inWl = isBookmarked(item.Id);
-            var firstEp = episodes[0];
-             // Determine continue/start state from episode UserData
-             var nextUpEp = null;
-             var hasResume = false;
-             episodes.forEach(function(ep) {
-               if (!nextUpEp && ep.UserData && ep.UserData.PlaybackPositionTicks > 0 && !ep.UserData.Played) {
-                 nextUpEp = ep;
-                 hasResume = true;
-               }
-             });
-             if (!nextUpEp) {
-               episodes.forEach(function(ep) {
-                 if (!nextUpEp && ep.UserData && !ep.UserData.Played) {
-                   nextUpEp = ep;
-                 }
-               });
-             }
-             var hasAnyPlayed = episodes.some(function(ep) { return ep.UserData && (ep.UserData.Played || ep.UserData.PlaybackPositionTicks > 0); });
-             var allPlayed = isItemWatched || (episodes.length > 0 && episodes.every(function(ep) { return ep.UserData && ep.UserData.Played; }));
-             var targetEp = nextUpEp || firstEp;
-             var watchBtnLabel, watchBtnIcon;
-
-             if (allPlayed) {
-               targetEp = firstEp;
-               watchBtnLabel = "REWATCH E1";
-               watchBtnIcon = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>';
-             } else if (hasResume || hasAnyPlayed || (nextUpEp && nextUpEp !== firstEp)) {
-               var epNum = targetEp ? (targetEp.IndexNumber || 1) : 1;
-               watchBtnLabel = "CONTINUE E" + epNum;
-               watchBtnIcon = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>';
-             } else {
-               targetEp = firstEp;
-               watchBtnLabel = "START WATCHING E1";
-               watchBtnIcon = '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>';
-             }
-             var watchFirstUrl = targetEp ? ("#/details?id=" + targetEp.Id + "&serverId=" + targetEp.ServerId) : ("#/details?id=" + item.Id + "&serverId=" + item.ServerId);
-
-            // Clean overview
-            var tmp = document.createElement("div");
-            tmp.innerHTML = item.Overview || "Stream all episodes on your personal server.";
-            var cleanDesc = tmp.textContent || tmp.innerText || "";
-
-            // Audio & Subs languages
-            var audioLangs = "Japanese, English";
-            var subLangs = "English";
-            if (firstEp && firstEp.MediaStreams) {
-              var aList = firstEp.MediaStreams.filter(function(s){return s.Type==="Audio";}).map(function(s){return s.Language ? s.Language.toUpperCase() : "JP";});
-              var sList = firstEp.MediaStreams.filter(function(s){return s.Type==="Subtitle";}).map(function(s){return s.Language ? s.Language.toUpperCase() : "EN";});
-              if (aList.length) audioLangs = Array.from(new Set(aList)).join(", ");
-              if (sList.length) subLangs = Array.from(new Set(sList)).join(", ");
-            }
-
-            container.innerHTML =
-              '<div class="cr-detail-hero">' +
-                '<div class="cr-detail-hero-bg" style="background-image:url(\'' + bgUrl + '\')"></div>' +
-                '<div class="cr-detail-hero-gradient"></div>' +
-                '<div class="cr-detail-hero-content">' +
-                  (logoUrl ? '<img class="cr-detail-logo" src="' + logoUrl + '" alt="' + item.Name + '" onerror="this.style.display=\'none\'" />' : '') +
-                  '<h1 class="cr-detail-title">' + item.Name + '</h1>' +
-                  '<div class="cr-detail-tags">' +
-                    '<span class="cr-tag-badge">' + ageRating + '</span>' +
-                    '<span class="cr-tag-subdub">Sub | Dub</span>' +
-                    '<span class="cr-tag-genres">' + (genres ? "\u2022 " + genres : "") + '</span>' +
-                  '</div>' +
-                  '<div class="cr-detail-rating-row">' +
-                    '<span class="cr-stars">\u2605\u2605\u2605\u2605\u2605</span>' +
-                    '<span>Average Rating: <b>' + rating + '</b></span>' +
-                  '</div>' +
-                  '<div class="cr-detail-actions">' +
-                    '<a href="' + watchFirstUrl + '" class="cr-btn-watch">' +
-                      watchBtnIcon + ' ' + watchBtnLabel + '</a>' +
-                    '<button class="cr-btn-bookmark' + (inWl ? " bookmarked" : "") + '" data-bookmark-id="' + item.Id + '" title="Watchlist">' +
-                      (inWl ? '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' :
-                              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>') +
-                    '</button>' +
-                    '<button class="cr-btn-watched' + (isItemWatched ? " watched" : "") + '" title="' + (isItemWatched ? "Mark Unwatched" : "Mark as Watched") + '">' +
-                      (isItemWatched ? '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>' :
-                                      '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>') +
-                    '</button>' +
-                  '</div>' +
-                  '<div class="cr-detail-synopsis-row">' +
-                    '<div class="cr-detail-synopsis-col">' +
-                      '<p>' + cleanDesc + '</p>' +
-                    '</div>' +
-                    '<div class="cr-detail-meta-col">' +
-                      '<div><span class="cr-meta-label">Audio:</span> ' + audioLangs + '</div>' +
-                      '<div><span class="cr-meta-label">Subtitles:</span> ' + subLangs + '</div>' +
-                    '</div>' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-              '<div class="cr-episodes-section">' +
-                '<div class="cr-episodes-bar">' +
-                  '<select class="cr-season-select">' +
-                    (seasons.length > 0 ? seasons.map(function(s){return '<option value="' + s.Id + '">' + s.Name + '</option>';}).join('') : '<option>Season 1</option>') +
-                  '</select>' +
-                  '<span class="cr-sort-text">OLDEST</span>' +
-                '</div>' +
-                '<div class="cr-episodes-grid" id="crEpisodesGrid"></div>' +
-              '</div>';
-
-            var bmBtn = container.querySelector('.cr-btn-bookmark');
-            bmBtn.addEventListener("click", function(e) {
-              e.stopPropagation();
-              toggleBookmark({ id: item.Id, name: item.Name, serverId: item.ServerId });
+          fetch(API_BASE + "/Shows/" + itemId + "/Episodes?UserId=" + uid + "&Fields=Overview,PrimaryImageAspectRatio,UserData&ApiKey=" + AUTH_KEY)
+            .then(function(r) { return r.json(); })
+            .then(function(epData) {
+              var episodes = epData.Items || [];
+              renderSeriesDetailPage(page, item, episodes, uid);
             });
-
-            var watchedBtn = container.querySelector('.cr-btn-watched');
-            if (watchedBtn) {
-              watchedBtn.addEventListener("click", function(e) {
-                e.stopPropagation();
-                var method = isItemWatched ? "DELETE" : "POST";
-                fetch(API_BASE + "/Users/" + (uid || "") + "/PlayedItems/" + item.Id + "?ApiKey=" + AUTH_KEY, { method: method })
-                  .then(function() {
-                    isItemWatched = !isItemWatched;
-                    watchedBtn.classList.toggle("watched", isItemWatched);
-                    watchedBtn.title = isItemWatched ? "Mark Unwatched" : "Mark as Watched";
-                    watchedBtn.innerHTML = isItemWatched
-                      ? '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>'
-                      : '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>';
-                  });
-              });
-            }
-
-            // Populate episodes into grid
-            var grid = container.querySelector("#crEpisodesGrid");
-            function renderSeasonEpisodes(seasonId) {
-              grid.innerHTML = "";
-              var filteredEps = seasonId ? episodes.filter(function(e){ return e.SeasonId === seasonId; }) : episodes;
-              if (filteredEps.length === 0) filteredEps = episodes;
-
-              filteredEps.forEach(function(ep) {
-                var epThumb = API_BASE + "/Items/" + ep.Id + "/Images/Primary?maxWidth=450&quality=85";
-                var mins = ep.RunTimeTicks ? Math.round(ep.RunTimeTicks / (10000000 * 60)) : 24;
-                var epNumber = ep.IndexNumber || 1;
-                var epUrl = "#/details?id=" + ep.Id + "&serverId=" + ep.ServerId;
-
-                var card = document.createElement("div");
-                card.className = "cr-ep-card";
-                card.onclick = function() {
-                  window.location.hash = epUrl;
-                };
-                card.innerHTML =
-                  '<div class="cr-ep-thumb-wrap">' +
-                    '<img class="cr-ep-thumb" src="' + epThumb + '" alt="' + ep.Name + '" onerror="this.src=\'favicon.bc8d51405ec040305a87.ico\'" />' +
-                    '<div class="cr-ep-duration">' + mins + 'm</div>' +
-                    '<div class="cr-ep-play-overlay">' +
-                      '<div class="cr-ep-play-icon"><svg viewBox="0 0 24 24" style="width:24px;height:24px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg></div>' +
-                    '</div>' +
-                  '</div>' +
-                  '<div class="cr-ep-info">' +
-                    '<div class="cr-ep-series-name">' + item.Name + '</div>' +
-                    '<div class="cr-ep-title">E' + epNumber + ' - ' + ep.Name + '</div>' +
-                    '<div class="cr-ep-subdub">Dub | Sub</div>' +
-                  '</div>';
-                grid.appendChild(card);
-              });
-            }
-
-            var seasonSelect = container.querySelector(".cr-season-select");
-            if (seasonSelect) {
-              seasonSelect.addEventListener("change", function() {
-                renderSeasonEpisodes(seasonSelect.value);
-              });
-            }
-            renderSeasonEpisodes(seasons.length > 0 ? seasons[0].Id : null);
-
-            detailPage.prepend(container);
-            isBuildingDetails = false;
-          });
-        }).catch(function(err) {
-          console.error("[CR_SERIES] Error during series build:", err);
-          isBuildingDetails = false;
         });
     });
   }
 
-  // ==============================================================
-  // 5. BUILD "MY LISTS" PAGE (PICTURE 3)
-  // ==============================================================
-  var isBuildingLists = false;
+  function renderSeriesDetailPage(pageEl, item, episodes, uid) {
+    if (document.getElementById("crSeriesDetailPage")) return;
 
-  function buildMyListsPage() {
-    if (!isLists()) {
-      var old = document.getElementById("crMyListsPage");
-      if (old) old.remove();
-      return;
+    var container = document.createElement("div");
+    container.id = "crSeriesDetailPage";
+
+    var bgUrl = item.BackdropImageTags && item.BackdropImageTags.length > 0 ?
+      API_BASE + "/Items/" + item.Id + "/Images/Backdrop/0?maxWidth=1920&quality=85" :
+      API_BASE + "/Items/" + item.Id + "/Images/Primary?maxWidth=1920&quality=85";
+
+    var genres = (item.Genres || []).join(", ") || "Anime, Shonen";
+    var desc = item.Overview || "";
+    var isBook = isBookmarked(item.Id);
+    var isItemWatched = item.UserData && item.UserData.Played;
+
+    // Smart Continue button logic
+    var nextEp = episodes.find(function(e) { return e.UserData && !e.UserData.Played; });
+    var btnText = "Start Watching E1";
+    var playEpId = episodes[0] ? episodes[0].Id : item.Id;
+
+    if (isItemWatched) {
+      btnText = "Rewatch E1";
+      playEpId = episodes[0] ? episodes[0].Id : item.Id;
+    } else if (nextEp) {
+      var epNum = nextEp.IndexNumber || 1;
+      btnText = epNum > 1 ? "Continue E" + epNum : "Start Watching E1";
+      playEpId = nextEp.Id;
     }
-    if (document.getElementById("crMyListsPage") || isBuildingLists) return;
-    isBuildingLists = true;
 
-    var main = document.querySelector("main") || document.querySelector("#reactRoot") || document.body;
-    var pages = main.querySelectorAll(".page");
-    pages.forEach(function(p) { p.style.display = "none"; });
+    container.innerHTML = 
+      '<div class="cr-detail-hero" style="background-image: url(\'' + bgUrl + '\');">' +
+        '<div class="cr-detail-hero-gradient"></div>' +
+        '<div class="cr-detail-hero-content">' +
+          '<h1 class="cr-detail-title">' + item.Name + '</h1>' +
+          '<div class="cr-detail-tags">' +
+            '<span class="cr-tag-badge">16+</span>' +
+            '<span class="cr-tag-subdub">Sub | Dub</span>' +
+            '<span class="cr-tag-genres">• ' + genres + '</span>' +
+          '</div>' +
+          '<p class="cr-detail-desc">' + desc + '</p>' +
+          '<div class="cr-detail-actions">' +
+            '<button class="cr-btn-watch" id="crDetailPlayBtn">' +
+              '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>' +
+              '<span>' + btnText + '</span>' +
+            '</button>' +
+            '<button class="cr-btn-bookmark' + (isBook ? ' bookmarked active' : '') + '" data-bookmark-id="' + item.Id + '" title="Watchlist">' +
+              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:' + (isBook ? 'currentColor' : 'none') + ';stroke:currentColor;stroke-width:2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+            '</button>' +
+            '<button class="cr-btn-watched' + (isItemWatched ? ' watched' : '') + '" id="crDetailWatchedToggle" title="Mark Series Watched">' +
+              '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:currentColor;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cr-episodes-section">' +
+        '<h2 class="cr-section-title">Episodes (' + episodes.length + ')</h2>' +
+        '<div class="cr-episodes-grid" id="crEpisodesGrid"></div>' +
+      '</div>';
 
-    var oldCr = document.getElementById("crMyListsPage");
-    if (oldCr) oldCr.remove();
+    // Play button
+    var playBtn = container.querySelector("#crDetailPlayBtn");
+    if (playBtn) {
+      playBtn.onclick = function() {
+        if (window.playbackManager) {
+          window.playbackManager.play({ ids: [playEpId] });
+        } else {
+          window.location.hash = "#/video?id=" + playEpId;
+        }
+      };
+    }
+
+    // Bookmark toggle
+    var bBtn = container.querySelector('.cr-btn-bookmark');
+    if (bBtn) {
+      bBtn.onclick = function() {
+        toggleBookmark({ id: item.Id, name: item.Name, type: item.Type });
+      };
+    }
+
+    // Watched toggle
+    var wBtn = container.querySelector('#crDetailWatchedToggle');
+    if (wBtn) {
+      wBtn.onclick = function() {
+        var markWatched = !wBtn.classList.contains("watched");
+        var method = markWatched ? "POST" : "DELETE";
+        fetch(API_BASE + "/Users/" + uid + "/PlayedItems/" + item.Id + "?ApiKey=" + AUTH_KEY, { method: method })
+          .then(function() {
+            wBtn.classList.toggle("watched", markWatched);
+          });
+      };
+    }
+
+    // Populate Episodes Grid
+    var grid = container.querySelector("#crEpisodesGrid");
+    episodes.forEach(function(ep) {
+      var epCard = document.createElement("div");
+      epCard.className = "cr-episode-card";
+      var epThumb = ep.Id ? API_BASE + "/Items/" + ep.Id + "/Images/Primary?maxHeight=300&quality=80" : bgUrl;
+      var epNum = ep.IndexNumber || 1;
+      var epName = ep.Name || ("Episode " + epNum);
+      var dur = ep.RunTimeTicks ? Math.round(ep.RunTimeTicks / (10000000 * 60)) + "m" : "24m";
+
+      epCard.innerHTML = 
+        '<div class="cr-episode-thumb-wrap">' +
+          '<img class="cr-episode-thumb" src="' + epThumb + '" alt="' + epName + '" loading="lazy" />' +
+          '<span class="cr-episode-duration">' + dur + '</span>' +
+        '</div>' +
+        '<div class="cr-episode-info">' +
+          '<div class="cr-episode-title">E' + epNum + ' - ' + epName + '</div>' +
+          '<div class="cr-episode-sub">Sub | Dub</div>' +
+        '</div>';
+
+      epCard.onclick = function() {
+        if (window.playbackManager) {
+          window.playbackManager.play({ ids: [ep.Id] });
+        } else {
+          window.location.hash = "#/video?id=" + ep.Id;
+        }
+      };
+
+      grid.appendChild(epCard);
+    });
+
+    pageEl.appendChild(container);
+  }
+
+  // 5. BUILD MY LISTS PAGE OVERHAUL (#/lists)
+  function buildCrunchyrollMyLists() {
+    var page = document.querySelector("#myPreferencesMenuPage") ||
+               document.querySelector(".page:not(.hide)");
+    if (!page) return;
+    if (document.getElementById("crMyListsPage")) return;
 
     var container = document.createElement("div");
     container.id = "crMyListsPage";
 
-    container.innerHTML =
+    container.innerHTML = 
       '<div class="cr-mylists-header">' +
-        '<svg viewBox="0 0 24 24" style="width:28px;height:28px;fill:none;stroke:#F47521;stroke-width:2.2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
-        '<h1 class="cr-mylists-title">My Lists</h1>' +
+        '<h1 class="cr-mylists-title">' +
+          '<svg viewBox="0 0 24 24" style="width:32px;height:32px;fill:currentColor;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
+          '<span>My Lists</span>' +
+        '</h1>' +
       '</div>' +
-      '<div class="cr-mylists-tabs">' +
+      '<div class="cr-mylists-nav">' +
         '<button class="cr-mylists-tab-btn active" data-tab="watchlist">WATCHLIST</button>' +
         '<button class="cr-mylists-tab-btn" data-tab="crunchylists">CRUNCHYLISTS</button>' +
         '<button class="cr-mylists-tab-btn" data-tab="history">HISTORY</button>' +
       '</div>' +
-      '<div id="crListsContent"></div>';
+      '<div id="crMyListsContent"></div>';
 
-    main.prepend(container);
+    page.appendChild(container);
 
-    function renderTab(tab) {
-      container.querySelectorAll(".cr-mylists-tab-btn").forEach(function(b) {
-        b.classList.toggle("active", b.getAttribute("data-tab") === tab);
-      });
-      var content = container.querySelector("#crListsContent");
-      content.innerHTML = "";
-
-      if (tab === "watchlist") {
-        // Watchlist contains watched full titles from Jellyfin + bookmarked titles
-        getActiveUserId().then(function(uid) {
-          var wl = getWatchlist();
-          var p = uid
-            ? fetch(API_BASE + "/Users/" + uid + "/Items?IncludeItemTypes=Series,Movie&Filters=IsPlayed&SortBy=DatePlayed,SortName&SortOrder=Descending&Limit=50&Recursive=true&Fields=PrimaryImageAspectRatio&ApiKey=" + AUTH_KEY).then(function(r){return r.json();}).catch(function(){return {Items:[]};})
-            : Promise.resolve({Items:[]});
-
-          p.then(function(wData) {
-            var watched = wData.Items || [];
-            var seen = {};
-            var combined = [];
-
-            // Add watched full titles from Jellyfin
-            watched.forEach(function(it) {
-              seen[it.Id] = true;
-              combined.push({
-                id: it.Id,
-                name: it.Name,
-                serverId: it.ServerId,
-                type: it.Type,
-                isWatched: true
-              });
-            });
-
-            // Add bookmarked titles
-            wl.forEach(function(it) {
-              if (!seen[it.id]) {
-                seen[it.id] = true;
-                combined.push({
-                  id: it.id,
-                  name: it.name,
-                  serverId: it.serverId,
-                  type: "Series",
-                  isWatched: false
-                });
-              }
-            });
-
-            if (combined.length === 0) {
-              content.innerHTML =
-                '<div class="cr-empty-box">' +
-                  '<div class="cr-empty-icon">' +
-                    '<svg viewBox="0 0 64 64" style="width:72px;height:72px;fill:#F47521;margin-bottom:12px;"><path d="M32 6C17.6 6 6 17.6 6 32s11.6 26 26 26 26-11.6 26-26S46.4 6 32 6zm-8 20c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm16 0c2.2 0 4 1.8 4 4s-1.8 4-4 4-4-1.8-4-4 1.8-4 4-4zm-8 22c-6.1 0-11.4-3.8-13.6-9.2-.4-1 .1-2.2 1.1-2.6 1-.4 2.2.1 2.6 1.1 1.7 4.1 5.8 7 10 7s8.2-2.8 10-7c.4-1 1.6-1.5 2.6-1.1 1 .4 1.5 1.6 1.1 2.6-2.3 5.3-7.6 9.2-13.8 9.2z"/></svg>' +
-                  '</div>' +
-                  '<p class="cr-empty-text">Your WatchList needs some love.<br>Let\'s fill it up with awesome anime.</p>' +
-                  '<a href="#/home" class="cr-btn-home-feed">GO TO HOME FEED</a>' +
-                '</div>';
-            } else {
-              var grid = document.createElement("div");
-              grid.className = "cr-watchlist-grid";
-              combined.forEach(function(item) {
-                var posterUrl = API_BASE + "/Items/" + item.id + "/Images/Primary?maxWidth=350&quality=85";
-                var card = document.createElement("div");
-                card.className = "cr-poster-card";
-                card.onclick = function() { window.location.hash = "#/details?id=" + item.id + "&serverId=" + item.serverId; };
-                card.innerHTML =
-                  '<div class="cr-poster-thumb-wrap">' +
-                    '<img class="cr-poster-thumb" src="' + posterUrl + '" alt="' + item.name + '" onerror="this.src=\'favicon.bc8d51405ec040305a87.ico\'" />' +
-                    (item.isWatched ? '<div class="cr-history-badge">\u2713 Watched</div>' : '') +
-                  '</div>' +
-                  '<div class="cr-poster-info">' +
-                    '<div class="cr-poster-title" title="' + item.name + '">' + item.name + '</div>' +
-                    '<div class="cr-poster-subtitle">' + (item.type === "Movie" ? "Movie" : "Series") + '</div>' +
-                  '</div>';
-                grid.appendChild(card);
-              });
-              content.appendChild(grid);
-            }
-          });
-        });
-      } else if (tab === "crunchylists") {
-        content.innerHTML =
-          '<div class="cr-empty-box">' +
-            '<div class="cr-empty-icon">' +
-              '<svg viewBox="0 0 24 24" style="width:64px;height:64px;fill:#F47521;margin-bottom:12px;"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h12v12z"/></svg>' +
-            '</div>' +
-            '<p class="cr-empty-text">Organize your favorite series into custom CrunchyLists.<br>Manage and share your curated anime collections.</p>' +
-            '<a href="#/playlists" class="cr-btn-home-feed">VIEW PLAYLISTS</a>' +
-          '</div>';
-      } else if (tab === "history") {
-        getActiveUserId().then(function(uid) {
-          if (!uid) return;
-          fetch(API_BASE + "/Users/" + uid + "/Items?Filters=IsPlayed&SortBy=DatePlayed&SortOrder=Descending&Limit=24&Recursive=true&ApiKey=" + AUTH_KEY)
-            .then(function(r){return r.json();})
-            .then(function(hData) {
-              var items = hData.Items || [];
-              if (items.length === 0) {
-                content.innerHTML = '<div class="cr-empty-box"><p class="cr-empty-text">No watched history recorded yet.</p></div>';
-              } else {
-                var grid = document.createElement("div");
-                grid.className = "cr-episodes-grid";
-                items.forEach(function(it) {
-                  var thumbUrl = API_BASE + "/Items/" + it.Id + "/Images/Primary?maxWidth=450&quality=85";
-                  var sTitle = it.SeriesName || it.Name;
-                  var epInfo = it.SeriesName ? ("S" + (it.ParentIndexNumber||1) + ":E" + (it.IndexNumber||1) + " - " + it.Name) : "Watched";
-                  var card = document.createElement("div");
-                  card.className = "cr-ep-card";
-                  card.onclick = function() { window.location.hash = "#/details?id=" + it.Id + "&serverId=" + it.ServerId; };
-                  card.innerHTML =
-                    '<div class="cr-ep-thumb-wrap">' +
-                      '<img class="cr-ep-thumb" src="' + thumbUrl + '" alt="' + sTitle + '" onerror="this.style.display=\'none\'" />' +
-                    '</div>' +
-                    '<div class="cr-ep-info">' +
-                      '<div class="cr-ep-series-name">' + sTitle + '</div>' +
-                      '<div class="cr-ep-title">' + epInfo + '</div>' +
-                    '</div>';
-                  grid.appendChild(card);
-                });
-                content.appendChild(grid);
-              }
-            });
-        });
-      }
-    }
-
-    container.querySelectorAll(".cr-mylists-tab-btn").forEach(function(b) {
-      b.onclick = function() {
-        renderTab(b.getAttribute("data-tab"));
+    // Tab buttons
+    container.querySelectorAll(".cr-mylists-tab-btn").forEach(function(btn) {
+      btn.onclick = function() {
+        container.querySelectorAll(".cr-mylists-tab-btn").forEach(function(b) { b.classList.remove("active"); });
+        btn.classList.add("active");
+        renderListsTab(btn.getAttribute("data-tab"));
       };
     });
 
-    renderTab("watchlist");
-    isBuildingLists = false;
+    renderListsTab("watchlist");
   }
 
+  function renderListsTab(tabName) {
+    var contentEl = document.getElementById("crMyListsContent");
+    if (!contentEl) return;
+    contentEl.innerHTML = '<div style="text-align:center;padding:40px;color:#94a3b8;">Loading...</div>';
+
+    getActiveUserId().then(function(uid) {
+      if (!uid) return;
+
+      if (tabName === "watchlist") {
+        var bookmarkedIds = getWatchlist().map(function(i) { return i.id; });
+        var playedUrl = API_BASE + "/Users/" + uid + "/Items?Recursive=true&IncludeItemTypes=Series,Movie&Filters=IsPlayed&Fields=PrimaryImageAspectRatio,UserData&ApiKey=" + AUTH_KEY;
+
+        fetch(playedUrl)
+          .then(function(r) { return r.json(); })
+          .then(function(pData) {
+            var playedItems = pData.Items || [];
+            var allItemsMap = {};
+            playedItems.forEach(function(it) { allItemsMap[it.Id] = it; });
+
+            if (bookmarkedIds.length > 0) {
+              fetch(API_BASE + "/Users/" + uid + "/Items?Ids=" + bookmarkedIds.join(",") + "&Fields=PrimaryImageAspectRatio,UserData&ApiKey=" + AUTH_KEY)
+                .then(function(r) { return r.json(); })
+                .then(function(bData) {
+                  (bData.Items || []).forEach(function(it) { allItemsMap[it.Id] = it; });
+                  renderWatchlistItems(contentEl, Object.values(allItemsMap));
+                })
+                .catch(function() {
+                  renderWatchlistItems(contentEl, Object.values(allItemsMap));
+                });
+            } else {
+              renderWatchlistItems(contentEl, Object.values(allItemsMap));
+            }
+          });
+      } else if (tabName === "crunchylists") {
+        contentEl.innerHTML = 
+          '<div class="cr-empty-box">' +
+            '<div class="cr-empty-icon">&#128218;</div>' +
+            '<p class="cr-empty-text">Create and organize your favorite anime into custom Crunchylists!</p>' +
+            '<button class="cr-btn-home-feed" onclick="window.location.hash=\'#/home\'">Explore Shows</button>' +
+          '</div>';
+      } else if (tabName === "history") {
+        var histUrl = API_BASE + "/Users/" + uid + "/Items?Recursive=true&IncludeItemTypes=Episode,Movie&Filters=IsPlayed&SortBy=DatePlayed&SortOrder=Descending&Limit=24&Fields=PrimaryImageAspectRatio,UserData,SeriesName&ApiKey=" + AUTH_KEY;
+        fetch(histUrl)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            renderWatchlistItems(contentEl, data.Items || []);
+          });
+      }
+    });
+  }
+
+  function renderWatchlistItems(containerEl, items) {
+    if (!items || items.length === 0) {
+      containerEl.innerHTML = 
+        '<div class="cr-empty-box">' +
+          '<div class="cr-empty-icon">&#128148;</div>' +
+          '<p class="cr-empty-text">Your Watchlist needs some love.<br/>Let\'s fill it up with awesome anime.</p>' +
+          '<a class="cr-btn-home-feed" href="#/home">Go to Home Feed</a>' +
+        '</div>';
+      return;
+    }
+
+    var grid = document.createElement("div");
+    grid.className = "cr-watchlist-grid";
+
+    items.forEach(function(item) {
+      var card = document.createElement("a");
+      card.className = "cr-poster-card";
+      var detailId = item.SeriesId || item.Id;
+      card.href = "#/details?id=" + detailId;
+
+      var imgId = item.Type === "Episode" && item.SeriesId ? item.SeriesId : item.Id;
+      var imgUrl = API_BASE + "/Items/" + imgId + "/Images/Primary?maxHeight=450&quality=85";
+      var title = item.SeriesName || item.Name;
+      var sub = item.Type === "Episode" ? (item.Name || "Episode") : (item.Type === "Series" ? "Series" : "Movie");
+      var isWatched = item.UserData && item.UserData.Played;
+
+      card.innerHTML = 
+        '<div class="cr-poster-img-wrap">' +
+          '<img class="cr-poster-img" src="' + imgUrl + '" alt="' + title + '" loading="lazy" />' +
+          (isWatched ? '<span class="cr-history-badge">&#10003; WATCHED</span>' : '') +
+        '</div>' +
+        '<div class="cr-poster-title">' + title + '</div>' +
+        '<div class="cr-poster-subtitle">' + sub + '</div>';
+
+      grid.appendChild(card);
+    });
+
+    containerEl.innerHTML = "";
+    containerEl.appendChild(grid);
+  }
+
+  // MAIN CONTROLLER
+  var debounceTimeout = null;
   function setup() {
     purgeNavLinks();
     injectHeaderElements();
+    injectMobileBottomNav();
 
     if (isHome()) {
-      var listsEl = document.getElementById("crMyListsPage");
-      if (listsEl) listsEl.remove();
-      var seriesEl = document.getElementById("crSeriesDetailPage");
-      if (seriesEl) seriesEl.remove();
+      var listsEl = document.getElementById("crMyListsPage"); if (listsEl) listsEl.remove();
+      var detEl = document.getElementById("crSeriesDetailPage"); if (detEl) detEl.remove();
       buildCrunchyrollHome();
     } else if (isDetails()) {
-      var homeEl = document.getElementById("crCrunchyrollHome");
-      if (homeEl) homeEl.remove();
-      var listsEl2 = document.getElementById("crMyListsPage");
-      if (listsEl2) listsEl2.remove();
+      var homeEl = document.getElementById("crCrunchyrollHome"); if (homeEl) homeEl.remove();
+      var listsEl = document.getElementById("crMyListsPage"); if (listsEl) listsEl.remove();
       buildCrunchyrollSeriesPage();
     } else if (isLists()) {
-      var homeEl2 = document.getElementById("crCrunchyrollHome");
-      if (homeEl2) homeEl2.remove();
-      var seriesEl2 = document.getElementById("crSeriesDetailPage");
-      if (seriesEl2) seriesEl2.remove();
-      buildMyListsPage();
-    } else {
-      var hEl = document.getElementById("crCrunchyrollHome"); if (hEl) hEl.remove();
-      var sEl = document.getElementById("crSeriesDetailPage"); if (sEl) sEl.remove();
-      var lEl = document.getElementById("crMyListsPage"); if (lEl) lEl.remove();
-      if (slideTimer) clearInterval(slideTimer);
+      var homeEl = document.getElementById("crCrunchyrollHome"); if (homeEl) homeEl.remove();
+      var detEl = document.getElementById("crSeriesDetailPage"); if (detEl) detEl.remove();
+      buildCrunchyrollMyLists();
     }
   }
 
-  var debounceTimeout = null;
   var observer = new MutationObserver(function() {
-    purgeNavLinks();
-    injectHeaderElements();
-    if (isHome() && !document.getElementById("crCrunchyrollHome") && !isBuildingHome) {
+    // Suppress JE
+    var jeLauncher = document.getElementById("je-header-launcher");
+    if (jeLauncher) jeLauncher.style.setProperty("display", "none", "important");
+    var jePanel = document.getElementById("je-header-launcher-panel");
+    if (jePanel) jePanel.remove();
+    var randomBtn = document.getElementById("randomItemButton");
+    if (randomBtn) randomBtn.style.setProperty("display", "none", "important");
+
+    if (isHome() && !document.getElementById("crCrunchyrollHome")) {
       if (debounceTimeout) clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(setup, 60);
-    } else if (isDetails() && !document.getElementById("crSeriesDetailPage") && !isBuildingDetails) {
+    } else if (isDetails() && !document.getElementById("crSeriesDetailPage")) {
       if (debounceTimeout) clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(setup, 60);
-    } else if (isLists() && !document.getElementById("crMyListsPage") && !isBuildingLists) {
+    } else if (isLists() && !document.getElementById("crMyListsPage")) {
       if (debounceTimeout) clearTimeout(debounceTimeout);
       debounceTimeout = setTimeout(setup, 60);
     }
