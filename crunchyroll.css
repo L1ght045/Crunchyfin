@@ -15,7 +15,9 @@ html, body, .mainDrawer, .skinBody, .mainAnimatedPage:not(#videoOsdPage):not(.vi
 }
 
 /* 1. HIDE OLD skinHeader & BLURRY BACKDROP IMAGES */
-.skinHeader,
+/* 1. HIDE OLD skinHeader ON DESKTOP & MOBILE (KEEP VISIBLE ON TV) */
+html:not(.layout-tv) body:not(.layout-tv) /* 1. HIDE OLD skinHeader ON DESKTOP & MOBILE (KEEP VISIBLE ON TV) */
+html:not(.layout-tv) body:not(.layout-tv) .skinHeader,
 .backdropImage {
   display: none !important;
 }
@@ -118,10 +120,10 @@ html, body, .mainDrawer, .skinBody, .mainAnimatedPage:not(#videoOsdPage):not(.vi
   color: #F47521 !important;
 }
 
-/* 7. HIDE DEFAULT JELLYFIN SECTIONS ON HOME */
-#indexPage .sections,
-.homeSectionsContainer,
-#indexPage > .pageTabContent {
+/* 7. HIDE DEFAULT JELLYFIN SECTIONS ON DESKTOP & MOBILE ONLY (KEEP VISIBLE ON TV) */
+html:not(.layout-tv) body:not(.layout-tv) #indexPage .sections,
+html:not(.layout-tv) body:not(.layout-tv) .homeSectionsContainer,
+html:not(.layout-tv) body:not(.layout-tv) #indexPage > .pageTabContent {
   display: none !important;
   height: 0 !important;
   min-height: 0 !important;
@@ -1002,4 +1004,136 @@ body.hide-scroll .mainAnimatedPage,
     align-items: center !important;
     justify-content: center !important;
   }
+}
+
+
+/* ============================================================== */
+/* 15. CRUNCHYROLL TV 10-FOOT INTERFACE (.layout-tv)              */
+/* ============================================================== */
+.layout-tv, .layout-tv body {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* TV Header: sleek translucent bar with orange branding */
+.layout-tv .skinHeader {
+  display: flex !important;
+  background: rgba(0, 0, 0, 0.88) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  position: fixed !important;
+  top: 0; left: 0; right: 0;
+  height: 64px !important;
+  padding: 0 48px !important;
+  z-index: 1000 !important;
+}
+.layout-tv #crCrunchyrollHome {
+  padding-top: 64px !important;
+}
+.layout-tv .headerTop {
+  display: flex !important;
+  align-items: center !important;
+}
+.layout-tv .headerHomeButtonText {
+  color: #F47521 !important;
+  font-weight: 700 !important;
+}
+
+/* TV Home Sections & Rows */
+.layout-tv #homeTab {
+  display: block !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.layout-tv .homeSectionsContainer {
+  display: block !important;
+  padding: 0 0 80px 0 !important;
+  width: 100% !important;
+}
+.layout-tv .sectionTitle {
+  font-size: 1.6rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  padding-left: 56px !important;
+  margin-bottom: 14px !important;
+}
+.layout-tv .itemsContainer {
+  padding-left: 56px !important;
+  padding-right: 56px !important;
+}
+
+/* TV Spotlight Hero Banner */
+.layout-tv #crHeroBanner {
+  position: relative !important;
+  width: 100% !important;
+  height: 520px !important;
+  background: #000000 !important;
+  border-radius: 0 !important;
+  margin: 0 0 24px 0 !important;
+}
+.layout-tv .cr-hero-content {
+  left: 56px !important;
+  bottom: 36px !important;
+  top: auto !important;
+  transform: none !important;
+  max-width: 800px !important;
+}
+.layout-tv .cr-hero-title {
+  font-size: 3.2rem !important;
+  font-weight: 900 !important;
+}
+
+/* TV REMOTE FOCUS RINGS - VIBRANT CRUNCHYROLL ORANGE */
+.layout-tv .card {
+  border-radius: 10px !important;
+  background: #141419 !important;
+  border: 3px solid transparent !important;
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.18s ease, border-color 0.18s ease !important;
+}
+.layout-tv .card:focus,
+.layout-tv .card.show-focus:focus,
+.layout-tv .card.focus,
+.layout-tv .emby-button:focus,
+.layout-tv .paper-icon-button-light:focus,
+.layout-tv .cr-tv-focus:focus,
+.layout-tv .headerButton:focus {
+  outline: none !important;
+  border-color: #F47521 !important;
+  box-shadow: 0 0 28px rgba(244, 117, 33, 0.95), 0 0 60px rgba(244, 117, 33, 0.5) !important;
+  transform: scale(1.08) !important;
+  z-index: 100 !important;
+}
+.layout-tv .card:focus .cardText-first {
+  color: #F47521 !important;
+  font-weight: 700 !important;
+}
+.layout-tv .itemProgressBarForeground {
+  background-color: #F47521 !important;
+}
+
+/* UNIVERSAL TV & REMOTE FOCUS STYLES (CRUNCHYROLL ORANGE) */
+.cr-btn-watch:focus,
+.cr-btn-bookmark:focus,
+.cr-poster-card:focus,
+.cr-row-btn:focus,
+.cr-tab-btn:focus,
+.card:focus,
+.card.show-focus:focus,
+.emby-button:focus,
+.paper-icon-button-light:focus {
+  outline: 3.5px solid #F47521 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 28px rgba(244, 117, 33, 0.95), 0 0 60px rgba(244, 117, 33, 0.5) !important;
+  transform: scale(1.08) !important;
+  z-index: 100 !important;
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.18s ease, outline 0.18s ease !important;
+}
+
+.cr-poster-card:focus .cr-card-title,
+.card:focus .cardText-first {
+  color: #F47521 !important;
+  font-weight: 700 !important;
 }

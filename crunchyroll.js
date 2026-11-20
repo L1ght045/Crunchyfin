@@ -241,17 +241,46 @@
     var page = document.querySelector("#indexPage") ||
                document.querySelector(".page:not(.hide)");
     if (!page) return;
-    if (document.getElementById("crCrunchyrollHome")) return;
+    if (document.getElementById("crCrunchyrollHome") || document.getElementById("crHeroBanner")) return;
 
+    var isTV = document.documentElement.classList.contains("layout-tv") ||
+               document.body.classList.contains("layout-tv") ||
+               navigator.userAgent.toLowerCase().includes("tv") ||
+               window.location.href.includes("layout=tv");
+
+    if (isTV) {
+      // --- TV MODE ---
+      var homeTab = document.getElementById("homeTab") || page;
+      var hero = document.createElement("div");
+      hero.id = "crHeroBanner";
+      hero.className = "cr-tv-hero";
+      homeTab.insertBefore(hero, homeTab.firstChild);
+
+      getActiveUserId().then(function(uid) {
+        if (!uid) return;
+        var token = (window.ApiClient && window.ApiClient.accessToken()) ? window.ApiClient.accessToken() : AUTH_KEY;
+        var url = API_BASE + "/Users/" + uid + "/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,Genres,BackdropImageTags,PrimaryImageAspectRatio,UserData&SortBy=SortName&ApiKey=" + token;
+        fetch(url)
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+            var items = data.Items || [];
+            var heroItems = items.filter(function(i) {
+              return i.BackdropImageTags && i.BackdropImageTags.length > 0;
+            });
+            populateHero(hero, heroItems.slice(0, 8), uid, true);
+          });
+      });
+      return;
+    }
+
+    // --- DESKTOP & MOBILE MODE ---
     var container = document.createElement("div");
     container.id = "crCrunchyrollHome";
 
-    // Hero banner container
     var hero = document.createElement("div");
     hero.id = "crHeroBanner";
     container.appendChild(hero);
 
-    // Most Popular section
     var popSec = document.createElement("div");
     popSec.className = "cr-section";
     popSec.id = "crMostPopularSection";
@@ -266,11 +295,10 @@
 
     page.appendChild(container);
 
-    // Fetch and populate hero items (Anime series)
     getActiveUserId().then(function(uid) {
       if (!uid) return;
-
-      var url = API_BASE + "/Users/" + uid + "/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,Genres,BackdropImageTags,PrimaryImageAspectRatio,UserData&SortBy=SortName&ApiKey=" + AUTH_KEY;
+      var token = (window.ApiClient && window.ApiClient.accessToken()) ? window.ApiClient.accessToken() : AUTH_KEY;
+      var url = API_BASE + "/Users/" + uid + "/Items?Recursive=true&IncludeItemTypes=Series&Fields=Overview,Genres,BackdropImageTags,PrimaryImageAspectRatio,UserData&SortBy=SortName&ApiKey=" + token;
       fetch(url)
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -278,14 +306,13 @@
           var heroItems = items.filter(function(i) {
             return i.BackdropImageTags && i.BackdropImageTags.length > 0;
           });
-
-          populateHero(hero, heroItems.slice(0, 8), uid);
+          populateHero(hero, heroItems.slice(0, 8), uid, false);
           populateCardsRow(document.getElementById("crMostPopularRow"), items);
         });
     });
   }
 
-  function populateHero(heroEl, items, uid) {
+  function populateHero(heroEl, items, uid, isTV) {
     if (!items || !items.length) return;
     heroEl.innerHTML = "";
 
@@ -311,11 +338,11 @@
           '</div>' +
           '<p class="cr-hero-desc">' + desc + '</p>' +
           '<div class="cr-hero-actions">' +
-            '<a class="cr-btn-watch" href="' + detailHash + '">' +
+            '<a class="cr-btn-watch' + (isTV ? ' focusable emby-button cr-tv-focus' : '') + '" ' + (isTV ? 'tabindex="0" ' : '') + 'href="' + detailHash + '">' +
               '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>' +
               '<span>Start Watching E1</span>' +
             '</a>' +
-            '<button class="cr-btn-bookmark' + (isBook ? ' bookmarked active' : '') + '" data-bookmark-id="' + item.Id + '" title="Add to Watchlist">' +
+            '<button tabindex="0" class="cr-btn-bookmark focusable emby-button' + (isBook ? ' bookmarked active' : '') + (isTV ? ' focusable emby-button cr-tv-focus' : '') + '" ' + (isTV ? 'tabindex="0" ' : '') + 'data-bookmark-id="' + item.Id + '" title="Add to Watchlist">' +
               '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:' + (isBook ? 'currentColor' : 'none') + ';stroke:currentColor;stroke-width:2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
             '</button>' +
           '</div>' +
@@ -388,7 +415,7 @@
 
     items.forEach(function(item) {
       var card = document.createElement("a");
-      card.className = "cr-poster-card";
+      card.className = "cr-poster-card focusable emby-button"; card.setAttribute("tabindex", "0");
       card.href = "#/details?id=" + item.Id;
 
       var imgUrl = API_BASE + "/Items/" + item.Id + "/Images/Primary?maxHeight=450&quality=85";
@@ -483,11 +510,11 @@
           '</div>' +
           '<p class="cr-detail-desc">' + desc + '</p>' +
           '<div class="cr-detail-actions">' +
-            '<button class="cr-btn-watch" id="crDetailPlayBtn">' +
+            '<button class="cr-btn-watch focusable emby-button" tabindex="0" id="crDetailPlayBtn">' +
               '<svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M8 5v14l11-7z"/></svg>' +
               '<span>' + btnText + '</span>' +
             '</button>' +
-            '<button class="cr-btn-bookmark' + (isBook ? ' bookmarked active' : '') + '" data-bookmark-id="' + item.Id + '" title="Watchlist">' +
+            '<button tabindex="0" class="cr-btn-bookmark focusable emby-button' + (isBook ? ' bookmarked active' : '') + '" data-bookmark-id="' + item.Id + '" title="Watchlist">' +
               '<svg viewBox="0 0 24 24" style="width:22px;height:22px;fill:' + (isBook ? 'currentColor' : 'none') + ';stroke:currentColor;stroke-width:2;"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>' +
             '</button>' +
             '<button class="cr-btn-watched' + (isItemWatched ? ' watched' : '') + '" id="crDetailWatchedToggle" title="Mark Series Watched">' +
@@ -673,7 +700,7 @@
 
     items.forEach(function(item) {
       var card = document.createElement("a");
-      card.className = "cr-poster-card";
+      card.className = "cr-poster-card focusable emby-button"; card.setAttribute("tabindex", "0");
       var detailId = item.SeriesId || item.Id;
       card.href = "#/details?id=" + detailId;
 
@@ -757,4 +784,69 @@
   } else {
     window.addEventListener("DOMContentLoaded", setup);
   }
+
+  // --- TV REMOTE & KEYBOARD D-PAD SPATIAL NAVIGATION ---
+  document.addEventListener("keydown", function(e) {
+    var active = document.activeElement;
+    if (!active) return;
+
+    var isCard = active.classList.contains("cr-poster-card") || active.classList.contains("card");
+    var isHeroBtn = active.classList.contains("cr-btn-watch") || active.classList.contains("cr-btn-bookmark");
+
+    if (e.key === "ArrowRight") {
+      if (isCard) {
+        var next = active.nextElementSibling;
+        if (next && (next.classList.contains("cr-poster-card") || next.classList.contains("card"))) {
+          e.preventDefault();
+          next.focus();
+          next.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      } else if (isHeroBtn && active.classList.contains("cr-btn-watch")) {
+        var bookmark = document.querySelector(".cr-hero-slide.active .cr-btn-bookmark") || document.querySelector(".cr-btn-bookmark");
+        if (bookmark) {
+          e.preventDefault();
+          bookmark.focus();
+        }
+      }
+    } else if (e.key === "ArrowLeft") {
+      if (isCard) {
+        var prev = active.previousElementSibling;
+        if (prev && (prev.classList.contains("cr-poster-card") || prev.classList.contains("card"))) {
+          e.preventDefault();
+          prev.focus();
+          prev.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      } else if (isHeroBtn && active.classList.contains("cr-btn-bookmark")) {
+        var watch = document.querySelector(".cr-hero-slide.active .cr-btn-watch") || document.querySelector(".cr-btn-watch");
+        if (watch) {
+          e.preventDefault();
+          watch.focus();
+        }
+      }
+    } else if (e.key === "ArrowDown") {
+      if (isHeroBtn) {
+        var firstCard = document.querySelector(".cr-poster-card") || document.querySelector(".card");
+        if (firstCard) {
+          e.preventDefault();
+          firstCard.focus();
+          firstCard.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    } else if (e.key === "ArrowUp") {
+      if (isCard) {
+        var watchBtn = document.querySelector(".cr-hero-slide.active .cr-btn-watch") || document.querySelector(".cr-btn-watch");
+        if (watchBtn) {
+          e.preventDefault();
+          watchBtn.focus();
+          watchBtn.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }
+    } else if (e.key === "Enter" || e.keyCode === 13) {
+      if (isCard) {
+        e.preventDefault();
+        active.click();
+      }
+    }
+  });
+
 })();
